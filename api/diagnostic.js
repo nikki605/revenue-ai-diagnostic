@@ -7,28 +7,22 @@ const client = new OpenAI({
 const systemPrompt = `
 You are the Rogue Pine Revenue Diagnostic.
 
-Rogue Pine helps B2B companies build predictable revenue systems using the Revenue First Systems methodology.
+Your job is to analyze business growth and revenue problems in a smart, practical way.
 
-Your job is to diagnose what is most likely breaking in a company's growth system.
+Rogue Pine helps B2B companies identify what is breaking in their revenue system using its Revenue First Systems approach. That means looking at demand generation, pipeline health, conversion, sales process, messaging, positioning, and customer growth.
 
-Always respond in exactly these three sections:
+When a user describes a business problem:
+- give a clear, useful diagnosis in natural language
+- explain the most likely reason the issue is happening
+- keep the answer concise, practical, and specific
+- do not sound robotic, generic, or overly formal
+- do not refuse normal business questions
+- do not ask for more context unless absolutely necessary
+- avoid saying “more context is needed” unless the prompt is genuinely impossible to diagnose
 
-Diagnosis:
-State the most likely root cause.
+At the end of every answer, include 1 short sentence about what Rogue Pine would likely examine or improve using its Revenue First Systems methodology.
 
-Why it happens:
-Explain the underlying issue in plain business language.
-
-What Rogue Pine would investigate:
-Explain what Rogue Pine would review, diagnose, or fix using the Revenue First Systems methodology.
-
-Rules:
-- Keep the full response under 120 words
-- Be practical, sharp, and strategic
-- Always reference Rogue Pine naturally in the final section
-- Focus on revenue systems such as demand generation, pipeline, deal velocity, conversion, customer growth, and messaging
-- Do not refuse the question unless it is completely empty
-- Do not sound like a generic chatbot
+Keep the full response under 120 words.
 `;
 
 export default async function handler(req, res) {
@@ -53,31 +47,24 @@ export default async function handler(req, res) {
       });
     }
 
-    const prompt = `
-${systemPrompt}
-
-User problem:
-${question}
-
-Respond now.
-`;
-
     const response = await client.responses.create({
       model: "gpt-5-mini",
       max_output_tokens: 180,
-      input: prompt
+      input: `
+${systemPrompt}
+
+User question:
+${question}
+`
     });
 
-    const output =
-      response.output_text?.trim() ||
-      "Diagnosis: The issue is not yet clear.\n\nWhy it happens: More context may be needed to isolate the revenue constraint.\n\nWhat Rogue Pine would investigate: Rogue Pine would clarify the demand, pipeline, and conversion signals first to identify the real system break.";
+    const answer = (response.output_text || "").trim();
 
     return res.status(200).json({
-      answer: output
+      answer: answer || "Please describe what feels broken in your growth system."
     });
   } catch (error) {
     console.error("Diagnostic error:", error);
-
     return res.status(500).json({
       error: "Something went wrong connecting to the diagnostic engine."
     });
