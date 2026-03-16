@@ -20,11 +20,9 @@ Instead:
 4. Suggest what Rogue Pine would investigate
 
 Be concise, strategic, and practical.
-
 Do not aggressively sell Rogue Pine.
 
 The Revenue First Systems framework evaluates:
-
 Demand generation
 Pipeline creation
 Deal velocity
@@ -40,7 +38,6 @@ Tone should feel like a sharp revenue strategist.
 `;
 
 export default async function handler(req, res) {
-
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -54,8 +51,7 @@ export default async function handler(req, res) {
   }
 
   try {
-
-    const { question } = req.body;
+    const { question } = req.body || {};
 
     if (!question || question.trim().length < 5) {
       return res.status(400).json({
@@ -69,25 +65,18 @@ export default async function handler(req, res) {
       input: systemPrompt + "\n\nUser question:\n" + question
     });
 
-    let output = "No answer returned.";
-
-    try {
-      output = response.output[0].content[0].text;
-    } catch (err) {
-      console.error("Response parsing error:", err);
-    }
+    const output =
+      response.output_text?.trim() ||
+      "I can diagnose revenue and growth issues. Please describe a challenge with leads, pipeline, sales, conversion, or customer growth.";
 
     return res.status(200).json({
       answer: output
     });
-
   } catch (error) {
-
     console.error("Diagnostic error:", error);
 
     return res.status(500).json({
       error: "Something went wrong connecting to the diagnostic engine."
     });
-
   }
 }
