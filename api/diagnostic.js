@@ -5,71 +5,31 @@ const client = new OpenAI({
 });
 
 const systemPrompt = `
-You are the Revenue Diagnostic built by Rogue Pine.
+You are the Rogue Pine Revenue Diagnostic.
 
-Rogue Pine helps B2B companies build predictable revenue systems using the Revenue First Systems framework.
+Rogue Pine helps B2B companies build predictable revenue systems using the Revenue First Systems methodology.
 
-Your job is to diagnose why growth is breaking.
+Your job is to diagnose what is most likely breaking in a company's growth system.
 
-Never respond like a generic AI assistant.
+Always respond in exactly these three sections:
 
-Instead:
-1. Diagnose the likely root cause
-2. Explain why it happens
-3. Identify which revenue system is broken
-4. Suggest what Rogue Pine would investigate
+Diagnosis:
+State the most likely root cause.
 
-Be concise, strategic, and practical.
-Do not aggressively sell Rogue Pine.
+Why it happens:
+Explain the underlying issue in plain business language.
 
-The Revenue First Systems framework evaluates:
-- Demand generation
-- Pipeline creation
-- Deal velocity
-- Conversion
-- Customer expansion
-- Messaging and positioning
+What Rogue Pine would investigate:
+Explain what Rogue Pine would review, diagnose, or fix using the Revenue First Systems methodology.
 
-Focus on diagnosing system failures, not surface symptoms.
-
-If the question is unrelated to revenue, politely redirect the user to describe a revenue or growth problem.
-
-Tone should feel like a sharp revenue strategist.
+Rules:
+- Keep the full response under 120 words
+- Be practical, sharp, and strategic
+- Always reference Rogue Pine naturally in the final section
+- Focus on revenue systems such as demand generation, pipeline, deal velocity, conversion, customer growth, and messaging
+- Do not refuse the question unless it is completely empty
+- Do not sound like a generic chatbot
 `;
-
-function extractText(response) {
-  if (!response) return "";
-
-  if (typeof response.output_text === "string" && response.output_text.trim()) {
-    return response.output_text.trim();
-  }
-
-  const parts = [];
-
-  if (Array.isArray(response.output)) {
-    for (const item of response.output) {
-      if (!item || !Array.isArray(item.content)) continue;
-
-      for (const block of item.content) {
-        if (!block) continue;
-
-        if (typeof block.text === "string" && block.text.trim()) {
-          parts.push(block.text.trim());
-        }
-
-        if (
-          typeof block === "object" &&
-          typeof block.value === "string" &&
-          block.value.trim()
-        ) {
-          parts.push(block.value.trim());
-        }
-      }
-    }
-  }
-
-  return parts.join("\n\n").trim();
-}
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -87,38 +47,30 @@ export default async function handler(req, res) {
   try {
     const { question } = req.body || {};
 
-    if (!question || question.trim().length < 5) {
+    if (!question || !question.trim()) {
       return res.status(400).json({
-        error: "Please describe a revenue or growth problem."
+        error: "Please describe what feels broken in your growth system."
       });
     }
 
-    const response = await client.responses.create({
-      model: "gpt-5-mini",
-      max_output_tokens: 180,
-      input: `
+    const prompt = `
 ${systemPrompt}
 
 User problem:
 ${question}
 
-Respond with exactly these three sections:
+Respond now.
+`;
 
-Diagnosis:
-Why it happens:
-What Rogue Pine would investigate:
-`
+    const response = await client.responses.create({
+      model: "gpt-5-mini",
+      max_output_tokens: 180,
+      input: prompt
     });
 
-    const output = extractText(response);
-
-    if (!output) {
-      console.error("Empty model response:", JSON.stringify(response, null, 2));
-      return res.status(200).json({
-        answer:
-          "Please describe a challenge with leads, pipeline, sales, conversion, or customer growth."
-      });
-    }
+    const output =
+      response.output_text?.trim() ||
+      "Diagnosis: The issue is not yet clear.\n\nWhy it happens: More context may be needed to isolate the revenue constraint.\n\nWhat Rogue Pine would investigate: Rogue Pine would clarify the demand, pipeline, and conversion signals first to identify the real system break.";
 
     return res.status(200).json({
       answer: output
