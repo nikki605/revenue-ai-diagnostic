@@ -37,6 +37,40 @@ If the question is unrelated to revenue, politely redirect the user to describe 
 Tone should feel like a sharp revenue strategist.
 `;
 
+function extractText(response) {
+  if (!response) return "";
+
+  if (typeof response.output_text === "string" && response.output_text.trim()) {
+    return response.output_text.trim();
+  }
+
+  const parts = [];
+
+  if (Array.isArray(response.output)) {
+    for (const item of response.output) {
+      if (!item || !Array.isArray(item.content)) continue;
+
+      for (const block of item.content) {
+        if (!block) continue;
+
+        if (typeof block.text === "string" && block.text.trim()) {
+          parts.push(block.text.trim());
+        }
+
+        if (
+          typeof block === "object" &&
+          typeof block.value === "string" &&
+          block.value.trim()
+        ) {
+          parts.push(block.value.trim());
+        }
+      }
+    }
+  }
+
+  return parts.join("\n\n").trim();
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -61,7 +95,7 @@ export default async function handler(req, res) {
 
     const response = await client.responses.create({
       model: "gpt-5-mini",
-      max_output_tokens: 150,
+      max_output_tokens: 180,
       input: `
 ${systemPrompt}
 
@@ -76,9 +110,15 @@ What Rogue Pine would investigate:
 `
     });
 
-    const output =
-      response.output_text?.trim() ||
-      "Please describe a challenge with leads, pipeline, sales, conversion, or customer growth.";
+    const output = extractText(response);
+
+    if (!output) {
+      console.error("Empty model response:", JSON.stringify(response, null, 2));
+      return res.status(200).json({
+        answer:
+          "Please describe a challenge with leads, pipeline, sales, conversion, or customer growth."
+      });
+    }
 
     return res.status(200).json({
       answer: output
