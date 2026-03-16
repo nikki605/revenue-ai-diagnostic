@@ -79,6 +79,37 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Question is required" });
     }
 
+    // Limit question size
+    if (question.length > 500) {
+      return res.status(400).json({
+        answer: "Please keep your question under 500 characters."
+      });
+    }
+
+    // Guardrail filter for relevant revenue topics
+    const allowedTopics = [
+      "lead",
+      "pipeline",
+      "sales",
+      "revenue",
+      "conversion",
+      "marketing",
+      "growth",
+      "customer",
+      "deal"
+    ];
+
+    const isRelevant = allowedTopics.some(topic =>
+      question.toLowerCase().includes(topic)
+    );
+
+    if (!isRelevant) {
+      return res.status(200).json({
+        answer:
+          "This diagnostic focuses on revenue growth issues. Try describing a challenge with leads, pipeline, sales, or customer growth."
+      });
+    }
+
     const response = await client.responses.create({
       model: "gpt-5-mini",
       max_output_tokens: 120,
