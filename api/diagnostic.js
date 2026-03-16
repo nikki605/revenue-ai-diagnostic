@@ -7,45 +7,18 @@ const client = new OpenAI({
 const systemPrompt = `
 You are Rogue Pine's Revenue Diagnostic.
 
-Your job is to analyze business growth and revenue problems in a smart, useful, practical way.
+Rogue Pine helps B2B companies diagnose what is breaking in their revenue system using its Revenue First Systems methodology.
 
-Rogue Pine helps B2B companies identify what is breaking in their revenue system using its Revenue First Systems methodology. That means evaluating issues across demand generation, lead quality, pipeline health, conversion, sales process, messaging, positioning, and customer growth.
+When a user describes a business problem:
+- give a clear diagnosis in plain English
+- explain the most likely reason it is happening
+- keep the answer concise, practical, and specific
+- mention Rogue Pine naturally near the end by briefly stating what Rogue Pine would likely examine or improve
+- do not sound robotic, generic, or overly formal
+- do not ask for more context unless the prompt is impossible to interpret
 
-Instructions:
-- Answer the user's business problem directly.
-- Give a concise diagnosis in natural language.
-- Explain the most likely reason the issue is happening.
-- Mention Rogue Pine naturally near the end by briefly stating what Rogue Pine would likely examine or improve.
-- Do not sound robotic, overly formal, or generic.
-- Do not ask for more context unless the question is completely impossible to answer.
-- Keep the full response under 120 words.
+Keep the full response under 120 words.
 `;
-
-function extractText(response) {
-  if (!response) return "";
-
-  if (typeof response.output_text === "string" && response.output_text.trim()) {
-    return response.output_text.trim();
-  }
-
-  if (Array.isArray(response.output)) {
-    const parts = [];
-
-    for (const item of response.output) {
-      if (!item || !Array.isArray(item.content)) continue;
-
-      for (const block of item.content) {
-        if (typeof block?.text === "string" && block.text.trim()) {
-          parts.push(block.text.trim());
-        }
-      }
-    }
-
-    return parts.join("\n\n").trim();
-  }
-
-  return "";
-}
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -69,25 +42,33 @@ export default async function handler(req, res) {
       });
     }
 
-    const prompt = `
-${systemPrompt}
-
-User question:
-${question}
-`;
-
     const response = await client.responses.create({
       model: "gpt-5-mini",
-      max_output_tokens: 180,
-      input: prompt
+      reasoning: { effort: "minimal" },
+      max_output_tokens: 260,
+      input: [
+        {
+          role: "user",
+          content: `${systemPrompt}
+
+User question:
+${question}`
+        }
+      ]
     });
 
-    const answer = extractText(response);
+    const answer = (response.output_text || "").trim();
 
     if (!answer) {
-      console.error("Empty OpenAI response:", JSON.stringify(response, null, 2));
+      console.error("Incomplete OpenAI response:", JSON.stringify(response, null, 2));
+
+      const reason = response.incomplete_details?.reason;
+
       return res.status(500).json({
-        error: "The diagnostic engine returned an empty response."
+        error:
+          reason === "max_output_tokens"
+            ? "The diagnostic engine ran out of output budget. Please try again."
+            : "The diagnostic engine returned an empty response."
       });
     }
 
