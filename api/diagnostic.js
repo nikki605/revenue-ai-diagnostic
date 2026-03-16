@@ -23,12 +23,12 @@ Be concise, strategic, and practical.
 Do not aggressively sell Rogue Pine.
 
 The Revenue First Systems framework evaluates:
-Demand generation
-Pipeline creation
-Deal velocity
-Conversion
-Customer expansion
-Messaging and positioning
+- Demand generation
+- Pipeline creation
+- Deal velocity
+- Conversion
+- Customer expansion
+- Messaging and positioning
 
 Focus on diagnosing system failures, not surface symptoms.
 
@@ -61,13 +61,24 @@ export default async function handler(req, res) {
 
     const response = await client.responses.create({
       model: "gpt-5-mini",
-      max_output_tokens: 120,
-      input: systemPrompt + "\n\nUser question:\n" + question
+      max_output_tokens: 150,
+      input: `
+${systemPrompt}
+
+User problem:
+${question}
+
+Respond with exactly these three sections:
+
+Diagnosis:
+Why it happens:
+What Rogue Pine would investigate:
+`
     });
 
     const output =
       response.output_text?.trim() ||
-      "I can diagnose revenue and growth issues. Please describe a challenge with leads, pipeline, sales, conversion, or customer growth.";
+      "Please describe a challenge with leads, pipeline, sales, conversion, or customer growth.";
 
     return res.status(200).json({
       answer: output
