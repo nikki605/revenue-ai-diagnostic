@@ -132,9 +132,10 @@ export default async function handler(req, res) {
     if (!question) {
       return res.status(400).json({ error: "Question is required" });
     }
-
-    const response = await client.responses.create({
-      model: "gpt-5-mini",
+const response = await client.responses.create({
+  model: "gpt-5-mini",
+  max_output_tokens: 120,
+  temperature: 0.4,
       input: [
         { role: "system", content: systemPrompt },
         ...examples,
