@@ -135,7 +135,6 @@ export default async function handler(req, res) {
 const response = await client.responses.create({
   model: "gpt-5-mini",
   max_output_tokens: 120,
-  temperature: 0.4,
       input: [
         { role: "system", content: systemPrompt },
         ...examples,
